@@ -1,0 +1,13 @@
+타자 서바이벌 v12 GitHub Pages 업로드용
+
+1. ZIP의 압축을 풉니다.
+2. 압축을 푼 폴더 안의 모든 파일과 폴더를 GitHub 저장소 루트에 업로드합니다. ZIP 자체를 올리지 않습니다.
+3. .github/workflows/deploy.yml 파일이 있는지 반드시 확인합니다.
+4. Commit changes 후 Settings > Pages > Source: GitHub Actions를 선택합니다.
+5. Actions 탭에서 배포 성공 여부를 확인합니다.
+6. https://marikeu.github.io/typing-survival/ 에서 테스트합니다.
+
+node_modules/, dist/, .env, .git/ 등 불필요한 파일은 제외했습니다.
+Firebase 웹 앱 설정(sc-typing)은 src/firebase-config.ts에 적용되었습니다.
+Firebase 실시간 데이터베이스의 규칙은 콘솔에 게시한 설정을 사용합니다.
+학생 공개 운영 전 방별 권한/채팅/점수 조작 방지 보강이 필요합니다.

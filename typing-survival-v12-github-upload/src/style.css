@@ -1,0 +1,115 @@
+:root{font-family:Pretendard,'Malgun Gothic',sans-serif;color:#3f3d3a;background:#e9e6df;font-synthesis:none}*{box-sizing:border-box}body{margin:0}button,input{font:inherit}button{cursor:pointer;padding:12px 24px;border:1px solid #d6d2c8;background:#f2f0ea;border-radius:4px;color:#3f3d3a;font-weight:700}button:hover{filter:brightness(.95)}button:disabled{opacity:.45;cursor:not-allowed}button.primary{background:#a04a4a;color:white;border-color:#a04a4a}main{min-height:100vh}.overlay{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;gap:18px;text-align:center}.eyebrow{font-size:12px;letter-spacing:3px;color:#8b8880;font-weight:800}h1{font-size:clamp(32px,5vw,54px);margin:0;font-weight:900}h1 em{font-style:normal;color:#a04a4a}.overlay p{line-height:1.7;color:#77736e;margin:0}.panel{width:min(430px,95vw);background:#f2f0ea;border:1px solid #d6d2c8;border-radius:6px;padding:18px 22px;text-align:left}.panel h2{font-size:16px;margin:0 0 12px}.panel small{display:block;margin-top:12px;color:#918c83;font-size:11px;line-height:1.5}.rank{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #dcd7ce;gap:16px}.rank:last-of-type{border-bottom:0}.muted{text-align:center;color:#8b8880}.nick{width:min(430px,95vw);padding:15px;border:1.5px solid #c9c3b9;background:#f7f5f0;text-align:center;font-size:19px;border-radius:4px}.overlay>.primary{width:min(430px,95vw)}.actions{display:flex;gap:10px}.result{text-align:center}.result strong{display:block;font-size:42px;margin:8px 0;color:#a04a4a}.result div{font-size:14px;color:#8b8880}.game{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:12px}.game header{display:flex;flex-direction:column;text-align:center;gap:4px}.game header span{color:#8b8880;font-size:13px}.game header strong{font-size:38px}.game canvas{width:min(100%,900px);height:auto;max-height:70vh;object-fit:contain}.inputbar{display:flex;width:min(580px,100%);gap:8px}.inputbar input{flex:1;min-width:0;padding:14px;font-size:17px;border:1.5px solid #a04a4a;border-radius:4px;background:#f7f5f0}.inputbar button{background:#a04a4a;color:white;border:none}.inputbar input{width:100%;text-align:center}.typing-status{min-height:21px;font-size:13px;font-weight:700;color:#a04a4a;text-align:center;margin-top:6px}.hint{font-size:12px;color:#8b8880;text-align:center}@media(max-width:500px){.game canvas{max-height:58vh}.game header strong{font-size:30px}.actions{flex-wrap:wrap;justify-content:center}}
+/* v3 레벨업 전리품 선택 */
+.gamefield{position:relative;width:min(100%,900px)}
+.gamefield canvas{display:block;width:100%}
+.loot-overlay{position:absolute;inset:0;background:rgba(233,230,223,.88);display:flex;align-items:center;justify-content:center;padding:16px;z-index:5}
+.loot-panel{width:min(710px,100%);background:#f3f0e9;border:1px solid #c9c3b9;border-radius:6px;padding:20px;text-align:center;box-shadow:0 12px 50px #38312c22}
+.loot-panel h2{margin:8px 0;font-size:23px}
+.loot-panel p{color:#77736e;font-size:13px;margin:8px 0 18px}
+.loot-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.loot-card{min-height:145px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:8px;padding:13px 9px;background:#e9e6df;border:1px solid #c8c0b5}
+.loot-card strong{font-size:17px;color:#3f3d3a}
+.loot-card span{font-size:12px;color:#77736e;line-height:1.5}
+.loot-card b{color:#a04a4a;font-size:17px}
+.loot-card:hover{border-color:#a04a4a;background:#f7f5ef}
+@media(max-width:600px){.loot-panel{padding:12px}.loot-grid{gap:5px}.loot-card{padding:9px 5px;min-height:135px}.loot-card strong{font-size:13px}.loot-card span{font-size:10px}.loot-card b{font-size:14px}.loot-panel h2{font-size:18px}}
+
+/* v4 난이도 선택 */
+.difficulty-picker{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}.difficulty-picker span{font-size:13px;color:#77736e;margin-right:4px}.difficulty-picker button{padding:9px 16px;font-size:13px}.difficulty-picker button.active{background:#a04a4a;color:white;border-color:#a04a4a}
+
+/* v6 학교 전체 랭킹 화면 */
+.link-button{display:block;margin:12px auto 0;padding:8px 14px;font-size:13px;background:transparent;border:1px solid #c9c3b9}
+.my-rank{font-size:13px!important;color:#a04a4a!important;margin-top:10px!important;text-align:center}
+.full-rank{width:min(620px,96vw)}.rank-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.rank-heading h2{margin:0}.rank-heading button{padding:7px 12px;font-size:12px}
+.rank-search{width:100%;margin-top:14px;padding:12px;border:1px solid #c9c3b9;border-radius:4px;background:#f7f5f0}.ranking-scroll{max-height:52vh;overflow-y:auto;margin-top:10px}.rank-me{color:#a04a4a;background:#e9ddd8;padding-left:8px;padding-right:8px}.my-ranking{padding:12px;margin-top:12px;text-align:center;background:#e9ddd8;color:#7f3636;border-radius:4px}
+
+/* v8 전리품 18종 상태표시 */
+.upgrades-bar{display:flex;flex-wrap:wrap;gap:4px;align-items:center;justify-content:center;max-width:900px;padding:5px 10px;min-height:27px}.upgrades-bar span{font-size:10px;background:#e4ded4;border:1px solid #cbbdb3;border-radius:3px;padding:3px 5px}.loot-reroll{padding:5px 12px;font-size:12px;margin:0 0 10px}.loot-grid{max-height:55vh;overflow-y:auto}
+
+/* v8.1 update verification & full loot list */
+.version-hint{font-size:11px;color:#82786e;text-align:center;letter-spacing:1px;margin-bottom:5px}
+.loot-count{font-size:12px;font-weight:400;color:#8b8880;white-space:nowrap}
+.lootbook-screen{justify-content:flex-start}.lootbook-list{width:min(860px,100%);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;text-align:left}
+.lootbook-card{display:flex;flex-direction:column;gap:8px;padding:14px;background:#f2f0ea;border:1px solid #d6d2c8;border-radius:5px;min-height:115px}
+.lootbook-card b{font-size:14px}.lootbook-card span{font-size:12px;line-height:1.5;color:#77736e}.lootbook-card small{color:#a04a4a;font-size:11px}
+@media(max-width:650px){.lootbook-list{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:420px){.lootbook-list{grid-template-columns:1fr}}
+/* v10: selected difficulty explanation */
+.difficulty-note{font-size:12px!important;color:#796e64!important;margin:5px auto 12px!important;text-align:center;line-height:1.5}
+
+
+
+
+/* v11.2 — 실제 1920 × 1080 게임 월드, 브라우저 크기에 비례하여 표시 */
+html,body,#root{min-width:0;min-height:100%;}
+.game{
+  height:100dvh;min-height:0;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:clamp(2px,.35vh,6px);
+  padding:clamp(6px,.9vh,12px) clamp(8px,1.1vw,24px);
+}
+.game header{flex:0 0 auto;gap:2px;max-width:100%;}
+.game header strong{font-size:clamp(25px,3.3vh,41px);line-height:1.04;}
+.game header span{font-size:clamp(11px,1.27vh,14px);}
+.game .version-hint{flex:0 0 auto;font-size:10px;margin:0;}
+.gamefield{
+  position:relative;flex:0 1 auto;min-height:0;
+  width:min(calc(100vw - 36px), calc((100dvh - 203px) * 16 / 9), 1920px);
+  max-width:100%;aspect-ratio:16/9;
+}
+.gamefield canvas{
+  display:block;width:100%;height:100%;max-height:none;
+  object-fit:contain;
+}
+.upgrades-bar{flex:0 0 auto;width:min(100%,1600px);max-width:none;min-height:18px;max-height:40px;overflow-y:auto;padding:3px 8px;}
+.inputbar{flex:0 0 auto;width:min(660px,90vw);}
+.inputbar input{padding:clamp(8px,1.2vh,13px);font-size:clamp(14px,1.5vh,17px);}
+.typing-status{flex:0 0 auto;min-height:16px;margin-top:0;font-size:12px;}
+.game .hint{flex:0 0 auto;margin:0;font-size:clamp(10px,1.1vh,12px);}
+.loot-overlay{overflow:auto;padding:clamp(6px,1.5vw,16px);}
+.loot-panel{max-height:100%;overflow-y:auto;}
+@media(max-height:740px){
+  .gamefield{width:min(calc(100vw - 24px),calc((100dvh - 175px) * 16 / 9),1920px);}
+  .game header strong{font-size:25px;}.game header span{font-size:11px;}
+  .upgrades-bar{max-height:22px;}.typing-status{font-size:11px;}
+}
+@media(max-width:720px){
+  .game{padding:6px;}
+  .gamefield{width:min(calc(100vw - 12px),calc((100dvh - 185px) * 16 / 9));}
+  .loot-overlay{padding:5px;}.loot-panel{padding:9px;}.loot-grid{gap:5px;}
+  .game .hint{font-size:10px;}
+}
+
+
+/* v11.4: 패치노트 · 오타 보존 · 서든 데스 · 중도 저장 */
+.patch-notes{width:min(430px,95vw);text-align:left;background:#f4f0e8;border:1px solid #c9bfb2;border-radius:6px;padding:10px 15px;margin-top:0;}
+.patch-notes summary{font-size:13px;font-weight:800;cursor:pointer;color:#814442;}
+.patch-notes ul{font-size:12px;line-height:1.65;padding-left:20px;margin:9px 0 2px;color:#625d55;}
+.inputbar input.input-error{border:2px solid #ca514b;background:#fff0eb;outline-color:#ca514b;}
+.quit-save{flex:0 0 auto;padding:6px 15px;font-size:12px;background:#f6eee9;border:1px solid #ad8b83;color:#8a4542;}
+.quit-save:hover{background:#efddd4;}
+.sudden-timer{color:#c23e3c!important;animation:suddenPulse .85s ease-in-out infinite alternate;}
+.sudden-alert{color:#b13636!important;font-weight:900;letter-spacing:.3px;}
+@keyframes suddenPulse{from{opacity:.75}to{opacity:1}}
+@media(max-height:700px){.quit-save{padding:4px 12px;font-size:11px}.gamefield{width:min(calc(100vw - 24px),calc((100dvh - 205px) * 16 / 9),1920px)}}
+
+/* v12 — 실시간 1:1 방, 채팅 및 상대 점수 */
+.multiplayer-entry{width:min(430px,95vw);background:#4d6e79!important;border-color:#4d6e79!important}
+.multi-warning{color:#b04444;min-height:15px;font-size:12px}
+.multi-lobby{justify-content:flex-start;padding-top:36px}
+.room-grid{width:min(1000px,96vw);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.room-tile{min-height:125px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:9px;background:#f7f5f0}
+.room-tile strong{font-size:19px}.room-tile span{font-size:13px;color:#a04a4a}.room-tile small{font-size:11px;word-break:break-word;color:#777}
+.multi-room-shell{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) minmax(265px,350px);gap:14px;padding:18px}
+.multi-wait-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:20px;background:#f4f0e9;border:1px solid #d6d2c8;border-radius:8px;padding:30px}
+.multi-wait-panel p{color:#77736e}.player-names{display:flex;justify-content:center;align-items:center;gap:14px;width:100%;flex-wrap:wrap}
+.player-names>div{min-width:145px;max-width:40%;padding:20px 10px;border:1px solid #d6d2c8;border-radius:6px;background:#fffaf3;display:flex;flex-direction:column;gap:12px}.player-names strong{overflow-wrap:anywhere;font-size:21px}.player-names small{color:#77736e}
+.multi-chat{height:calc(100vh - 36px);min-height:300px;background:#f4f0e9;border:1px solid #d6d2c8;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.multi-chat h2{margin:0;font-size:17px}.multi-chat-messages{flex:1;overflow:auto;min-height:0;background:#fffdf8;border:1px solid #ddd8cf;border-radius:6px;padding:10px;text-align:left}
+.multi-chat-messages>div{display:flex;flex-direction:column;align-items:flex-start;margin-bottom:13px;gap:4px}.multi-chat-messages b{font-size:11px;color:#77736e}.multi-chat-messages span{font-size:13px;background:#ece9e2;border-radius:5px;padding:7px 10px;max-width:90%;overflow-wrap:anywhere;white-space:pre-wrap}
+.multi-chat-messages .mine{align-items:flex-end}.multi-chat-messages .mine span{background:#dce8e5}.multi-chat-form{display:flex;gap:6px}.multi-chat-form input{width:100%;min-width:0;padding:11px;border:1px solid #bbb6ad;background:white;border-radius:4px}.multi-chat-form button{padding:9px 12px}
+.multi-active{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,320px);gap:10px;padding:10px;height:100dvh;overflow:hidden}
+.multi-active>.game{padding:4px;min-width:0;width:100%;height:calc(100dvh - 20px)}
+.multi-active .gamefield{width:min(100%,calc((100dvh - 200px) * 16 / 9))}
+.multi-active .multi-chat{height:calc(100dvh - 20px)}
+.multi-opponent-score{display:flex;align-items:center;justify-content:center;gap:10px;font-weight:900;color:#a04a4a;font-size:15px;border:1px solid #be8b83;border-radius:4px;padding:3px 8px}.multi-opponent-score small{font-weight:500;color:#77736e}
+@media(max-width:900px){.room-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.multi-room-shell,.multi-active{grid-template-columns:1fr;overflow:visible;height:auto}.multi-chat,.multi-active .multi-chat{height:330px}.multi-active>.game{height:85vh;min-height:500px}}

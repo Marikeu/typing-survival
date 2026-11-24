@@ -58,14 +58,22 @@ export async function settleDisconnectedMatch(roomId: string) {
   }, { applyLocally: false });
 }
 
+// 방 참여자만 대화 기록을 삭제할 수 있습니다. Firebase 규칙에서 chats/$room 삭제를 허용해야 합니다.
+export async function clearRoomChat(roomId: string) {
+  if (!db || !myUid || !ROOM_IDS.includes(roomId)) throw new Error('방에 입장한 뒤 채팅을 초기화할 수 있습니다.');
+  await remove(ref(database(), `chats/${roomId}`));
+}
+
 export async function joinRoom(roomId: string, nickname: string) {
   if (!ROOM_IDS.includes(roomId)) throw new Error('없는 방입니다.');
   const uid = await connectMultiplayer();
   const r = ref(database(), `rooms/${roomId}`);
+  let enteredEmptyRoom = false;
   const outcome = await runTransaction(r, (current: Room | null) => {
     const room: Room = current ? { ...current } : {};
     const members = { ...(room.members || {}) };
     const count = Object.keys(members).length;
+    enteredEmptyRoom = count === 0;
     // 경기 진행 중에는 새 사람이 들어와 기존 대결을 덮어쓰지 못하도록 합니다.
     if (room.match?.status === 'playing' && count > 0 && !members[uid]) return;
     if (!members[uid] && count >= 2) return;
@@ -78,12 +86,19 @@ export async function joinRoom(roomId: string, nickname: string) {
   }, { applyLocally: false });
   if (!outcome.committed) throw new Error('방이 가득 찼거나 경기가 진행 중입니다.');
   await onDisconnect(ref(database(), `rooms/${roomId}/members/${uid}`)).remove();
+  // 기존 인원이 모두 끊기고 채팅만 남았다면 새 이용자의 첫 입장에서 초기화합니다.
+  if (enteredEmptyRoom) {
+    try { await clearRoomChat(roomId); } catch (error) { console.warn('지난 채팅 삭제 실패: Firebase 규칙을 확인하세요.', error); }
+  }
   return uid;
 }
 
 export async function leaveRoom(roomId: string) {
   if (!db || !myUid || !ROOM_IDS.includes(roomId)) return;
   const uid = myUid;
+  // 퇴장할 때 채팅도 초기화해 이전 대결의 기록이 남지 않게 합니다.
+  // Firebase 규칙 오류가 있더라도 퇴장 자체는 진행합니다.
+  try { await clearRoomChat(roomId); } catch (error) { console.warn('채팅 초기화 실패:', error); }
   await runTransaction(ref(database(), `rooms/${roomId}`), (current: Room | null) => {
     if (!current || !current.members?.[uid]) return;
     const members = { ...current.members };

@@ -113,3 +113,9 @@ html,body,#root{min-width:0;min-height:100%;}
 .multi-active .multi-chat{height:calc(100dvh - 20px)}
 .multi-opponent-score{display:flex;align-items:center;justify-content:center;gap:10px;font-weight:900;color:#a04a4a;font-size:15px;border:1px solid #be8b83;border-radius:4px;padding:3px 8px}.multi-opponent-score small{font-weight:500;color:#77736e}
 @media(max-width:900px){.room-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.multi-room-shell,.multi-active{grid-template-columns:1fr;overflow:visible;height:auto}.multi-chat,.multi-active .multi-chat{height:330px}.multi-active>.game{height:85vh;min-height:500px}}
+
+/* v12.2: 멀티 대결방 채팅 초기화 버튼 */
+.multi-chat-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.multi-chat-heading h2{margin:0}
+.chat-reset-button{font-size:12px;padding:6px 9px;border:1px solid #b9afa4;border-radius:5px;background:#fffdf8;color:#766052;cursor:pointer;flex-shrink:0}
+.chat-reset-button:hover{background:#f1e6dc}

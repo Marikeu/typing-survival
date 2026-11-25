@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 import {EffectSystem} from './effects';
-import { ROOM_IDS, multiplayerConfigured, connectMultiplayer, getUid, watchRooms, watchRoom, watchChat, joinRoom, leaveRoom, beginMatch, changeRoomDifficulty, publishScore, sendChat, clearRoomChat, type Room, type ChatItem } from './multiplayer';
+import { ROOM_IDS, multiplayerConfigured, connectMultiplayer, getUid, watchRooms, watchRoom, watchChat, joinRoom, leaveRoom, beginMatch, changeRoomDifficulty, publishScore, sendChat, clearRoomChat, watchGlobalChat, sendGlobalChat, globalChatHour, globalChatResetAt, type Room, type ChatItem } from './multiplayer';
 import { BOSS_WORDS, pickGameWord, splitBossPhrase } from './words';
 import {fetchRanking,fetchPlayerRank,receiptExists,submitScore,onlineReady, type OnlineRank, type PlayerRank} from './online';
 
@@ -49,6 +49,7 @@ const MAX_ACTIVE_ENEMIES=220;
 // 20분 이후에는 시간이 지날수록 적 밀도·속도·러시가 가파르게 증가합니다.
 const suddenDeathPower=(seconds:number)=>seconds<SUDDEN_DEATH_AT?0:Math.min(1,(seconds-SUDDEN_DEATH_AT)/90);
 const PATCH_NOTES=[
+  'v12.4: 대결방 전체 채팅 · 매시 정각 기록 초기화',
   'v12.3: 대전 난이도 선택 · 대결 다시하기 · 퇴장 시 인원 실시간 반영',
   'v12.2: 멀티방 채팅 초기화 버튼 · 퇴장 시 채팅 삭제 · 새 방 입장 시 이전 채팅 정리',
   'v12.1: 방 나가기·연결 끊김 시 경기 정리 및 기권승 처리',
@@ -81,6 +82,14 @@ function App(){
   const [currentRoom,setCurrentRoom]=useState<Room|null>(null);
   const [chat,setChat]=useState<ChatItem[]>([]);
   const [chatDraft,setChatDraft]=useState('');
+  const [globalChat,setGlobalChat]=useState<ChatItem[]>([]);
+  const [globalChatDraft,setGlobalChatDraft]=useState('');
+  const [globalChatPeriod,setGlobalChatPeriod]=useState(globalChatHour);
+  const [globalChatError,setGlobalChatError]=useState('');
+  const [globalChatSending,setGlobalChatSending]=useState(false);
+  const [globalChatNow,setGlobalChatNow]=useState(Date.now);
+  const globalChatLastSentRef=useRef(0);
+
   const [multiError,setMultiError]=useState('');
   const [multiResult,setMultiResult]=useState('');
   const [opponentScore,setOpponentScore]=useState(0);
@@ -169,6 +178,43 @@ function App(){
     const off=watchRooms(setRooms);
     return ()=>off();
   },[screen]);
+  // 로비의 전체 채팅은 모든 대결방에서 공유하며 매시 정각에 새 채널로 전환합니다.
+  useEffect(()=>{
+    if(screen!=='lobby')return;
+    const tick=()=>{
+      const now=Date.now();
+      setGlobalChatNow(now);
+      const next=globalChatHour(now);
+      setGlobalChatPeriod(prev=>prev===next?prev:next);
+    };
+    tick();
+    const timer=window.setInterval(tick,10000);
+    return()=>window.clearInterval(timer);
+  },[screen]);
+  useEffect(()=>{
+    if(screen!=='lobby'||!multiplayerConfigured)return;
+    setGlobalChat([]);
+    const off=watchGlobalChat(globalChatPeriod, setGlobalChat);
+    return()=>off();
+  },[screen,globalChatPeriod]);
+  const postGlobalChat=async()=>{
+    if(globalChatSending||!globalChatDraft.trim())return;
+    if(!nicknameValid){setGlobalChatError('닉네임을 먼저 입력해 주세요.');return;}
+    const now=Date.now();
+    if(now-globalChatLastSentRef.current<2500){setGlobalChatError('2.5초 간격으로 채팅할 수 있어요.');return;}
+    setGlobalChatSending(true);
+    try{
+      await sendGlobalChat(nickname.trim(),globalChatDraft,globalChatPeriod);
+      globalChatLastSentRef.current=Date.now();
+      setGlobalChatDraft('');setGlobalChatError('');
+    }catch(e){setGlobalChatError(e instanceof Error?e.message:String(e));}
+    finally{setGlobalChatSending(false);}
+  };
+  useEffect(()=>{
+    if(!globalChat.length||screen!=='lobby')return;
+    const area=document.querySelector('.global-chat .multi-chat-messages');
+    if(area)area.scrollTop=area.scrollHeight;
+  },[globalChat,screen]);
   useEffect(()=>{
     if(!roomId)return;
     let off1=()=>{},off2=()=>{};
@@ -535,13 +581,21 @@ function App(){
   const rematch=async()=>{try{await beginMatch(roomId);setMultiError('')}catch(e){setMultiError(String(e))}};
   const forfeitWin=currentRoom?.match?.reason==='opponent_left'&&currentRoom.match.winnerUid===getUid();
   const verdict=forfeitWin?'기권승!':!bothFinished?'상대 경기 종료 대기':myFinalScore>(opponent?.score||0)?'승리!':myFinalScore<(opponent?.score||0)?'패배':'무승부';
+  const renderGlobalChatPanel=()=> <aside className="multi-chat global-chat">
+    <div className="multi-chat-heading"><h2>💬 대결방 전체 채팅</h2><span className="global-chat-count">전체 공개</span></div>
+    <p className="global-chat-notice">10개 방의 학생들이 함께 대화해요. 매시 정각 초기화 · 다음 초기화 {new Date(globalChatResetAt(globalChatNow)).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}</p>
+    <div className="multi-chat-messages" aria-live="polite">{globalChat.length?globalChat.map((line,i)=><div key={`${line.uid}-${line.at}-${i}`} className={line.uid===getUid()?'mine':''}><b>{line.nickname}</b><span>{line.text}</span></div>):<p>이번 시간대의 채팅이 아직 없습니다. 첫 메시지를 남겨 보세요!</p>}</div>
+    <form className="multi-chat-form" onSubmit={e=>{e.preventDefault();void postGlobalChat()}}><input value={globalChatDraft} maxLength={150} onChange={e=>setGlobalChatDraft(e.target.value)} placeholder="전체 채팅 입력 (150자)" aria-label="대결방 전체 채팅"/><button type="submit" disabled={globalChatSending||!globalChatDraft.trim()}>전송</button></form>
+    {globalChatError&&<small className="multi-warning">{globalChatError}</small>}
+    <small className="global-chat-guidance">개인정보나 욕설을 올리지 마세요. 닉네임과 메시지는 모든 대결방 학생에게 보입니다.</small>
+  </aside>;
   const renderChatPanel=()=> <aside className="multi-chat"><div className="multi-chat-heading"><h2>💬 대결방 채팅</h2><button type="button" className="chat-reset-button" onClick={()=>void resetChat()}>채팅 초기화</button></div><div className="multi-chat-messages">{chat.length?chat.map((line,i)=><div key={i} className={line.uid===getUid()?'mine':''}><b>{line.nickname}</b><span>{line.text}</span></div>):<p>인사말을 입력해 보세요.</p>}</div><form className="multi-chat-form" onSubmit={e=>{e.preventDefault();void postChat()}}><input value={chatDraft} maxLength={150} onChange={e=>setChatDraft(e.target.value)} placeholder="채팅 입력 (최대 150자)"/><button type="submit">전송</button></form></aside>;
   return <main>
-    {screen==='start'&&<div className="overlay"><div className="eyebrow">SCHOOL TYPING SURVIVAL · GOOGLE v12.3 · 1:1 멀티플레이 · 게임 좌표 1920×1080</div><h1>타자 <em>서바이벌</em></h1><p>정답 입력 후 Enter 또는 Space로 공격!<br/>전리품을 선택하고 투사체·무리 러시·보스에 도전하세요.</p><section className="panel"><h2>🏆 학교 전체 TOP 5</h2>{ranked.length?ranked.map((r,i)=><div className="rank" key={i}><span>{i+1}위 · {r.nickname}</span><strong>{r.score.toLocaleString()}점</strong></div>):<p className="muted">아직 기록이 없습니다.</p>}<small>{rankStatus||(!onlineReady?'※ 연동 전에는 이 기기의 기록만 보입니다.':`※ ${DIFFICULTIES[difficulty].label} 난이도 기준 · 학생별 최고 점수`)}</small><button className="link-button" onClick={()=>openRanking('start')}>전체 순위 보기</button>{playerRank?.rank&&<p className="my-rank">내 최고 기록: {playerRank.score?.toLocaleString()}점 · 전체 {playerRank.rank}위</p>}</section><div className="difficulty-picker"><span>난이도 선택</span>{(Object.keys(DIFFICULTIES) as Difficulty[]).map(d=><button key={d} className={difficulty===d?'active':''} onClick={()=>setDifficulty(d)}>{DIFFICULTIES[d].label}</button>)}</div><p className="difficulty-note">{difficulty==='easy'?'쉬움 · 천천히 등장하는 연습 모드':difficulty==='normal'?'보통 · 기존 기준의 표준 전투':'어려움 · 매우 빠른 적, 10마리 러시, 이른 보스'}</p><details className="patch-notes" open><summary>📋 최신 패치노트 · v12.3</summary><ul>{PATCH_NOTES.map((note,i)=><li key={i}>{note}</li>)}</ul></details><input className="nick" value={nickname} maxLength={16} onChange={e=>setNickname(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')start()}} placeholder="닉네임 입력" aria-label="닉네임"/><button className="primary" disabled={!/^[가-힣A-Za-z0-9_]{2,16}$/.test(nickname.trim())} onClick={()=>start()}>게임 시작</button><button className="primary multiplayer-entry" onClick={openLobby}>⚔ 1:1 멀티플레이 · 방 10개</button><small className="multi-warning">{multiError}</small><button className="link-button" onClick={()=>setScreen('lootbook')}>전리품 도감 · 18종 전부 보기</button><small>{onlineStatus}</small></div>}
-    {screen==='lobby'&&<div className="overlay multi-lobby"><div className="eyebrow">1 VS 1 · MULTIPLAYER</div><h1>멀티 <em>대결방</em></h1><p>닉네임: <b>{nickname}</b> · 방별 쉬움/보통/어려움 선택 · 최대 5분</p><div className="room-grid">{ROOM_IDS.map((id,i)=>{const room=rooms[id];const count=Object.keys(room?.members||{}).length;const running=room?.match?.status==='playing'&&count>0;return <button key={id} className="room-tile" disabled={count>=2||running} onClick={()=>enterRoom(id)}><strong>{i+1}번 방</strong><span>{running?'경기 중':count===2?'인원 마감':`${count} / 2명`}</span><small>난이도: {DIFFICULTIES[room?.difficulty||'normal'].label}</small><small>{Object.values(room?.members||{}).map(m=>m.nickname).join(' · ')||'입장 가능'}</small></button>})}</div><small className="multi-warning">{multiError}</small><button onClick={()=>setScreen('start')}>시작 화면으로</button></div>}
+    {screen==='start'&&<div className="overlay"><div className="eyebrow">SCHOOL TYPING SURVIVAL · GOOGLE v12.4 · 1:1 멀티플레이 · 게임 좌표 1920×1080</div><h1>타자 <em>서바이벌</em></h1><p>정답 입력 후 Enter 또는 Space로 공격!<br/>전리품을 선택하고 투사체·무리 러시·보스에 도전하세요.</p><section className="panel"><h2>🏆 학교 전체 TOP 5</h2>{ranked.length?ranked.map((r,i)=><div className="rank" key={i}><span>{i+1}위 · {r.nickname}</span><strong>{r.score.toLocaleString()}점</strong></div>):<p className="muted">아직 기록이 없습니다.</p>}<small>{rankStatus||(!onlineReady?'※ 연동 전에는 이 기기의 기록만 보입니다.':`※ ${DIFFICULTIES[difficulty].label} 난이도 기준 · 학생별 최고 점수`)}</small><button className="link-button" onClick={()=>openRanking('start')}>전체 순위 보기</button>{playerRank?.rank&&<p className="my-rank">내 최고 기록: {playerRank.score?.toLocaleString()}점 · 전체 {playerRank.rank}위</p>}</section><div className="difficulty-picker"><span>난이도 선택</span>{(Object.keys(DIFFICULTIES) as Difficulty[]).map(d=><button key={d} className={difficulty===d?'active':''} onClick={()=>setDifficulty(d)}>{DIFFICULTIES[d].label}</button>)}</div><p className="difficulty-note">{difficulty==='easy'?'쉬움 · 천천히 등장하는 연습 모드':difficulty==='normal'?'보통 · 기존 기준의 표준 전투':'어려움 · 매우 빠른 적, 10마리 러시, 이른 보스'}</p><details className="patch-notes" open><summary>📋 최신 패치노트 · v12.4</summary><ul>{PATCH_NOTES.map((note,i)=><li key={i}>{note}</li>)}</ul></details><input className="nick" value={nickname} maxLength={16} onChange={e=>setNickname(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')start()}} placeholder="닉네임 입력" aria-label="닉네임"/><button className="primary" disabled={!/^[가-힣A-Za-z0-9_]{2,16}$/.test(nickname.trim())} onClick={()=>start()}>게임 시작</button><button className="primary multiplayer-entry" onClick={openLobby}>⚔ 1:1 멀티플레이 · 방 10개</button><small className="multi-warning">{multiError}</small><button className="link-button" onClick={()=>setScreen('lootbook')}>전리품 도감 · 18종 전부 보기</button><small>{onlineStatus}</small></div>}
+    {screen==='lobby'&&<div className="overlay multi-lobby"><div className="multi-lobby-main"><div className="eyebrow">1 VS 1 · MULTIPLAYER</div><h1>멀티 <em>대결방</em></h1><p>닉네임: <b>{nickname}</b> · 방별 쉬움/보통/어려움 선택 · 최대 5분</p><div className="room-grid">{ROOM_IDS.map((id,i)=>{const room=rooms[id];const count=Object.keys(room?.members||{}).length;const running=room?.match?.status==='playing'&&count>0;return <button key={id} className="room-tile" disabled={count>=2||running} onClick={()=>enterRoom(id)}><strong>{i+1}번 방</strong><span>{running?'경기 중':count===2?'인원 마감':`${count} / 2명`}</span><small>난이도: {DIFFICULTIES[room?.difficulty||'normal'].label}</small><small>{Object.values(room?.members||{}).map(m=>m.nickname).join(' · ')||'입장 가능'}</small></button>})}</div><small className="multi-warning">{multiError}</small><button onClick={()=>setScreen('start')}>시작 화면으로</button></div>{renderGlobalChatPanel()}</div>}
     {screen==='room'&&<div className="multi-room-shell"><section className="multi-wait-panel"><div className="eyebrow">1 VS 1 · ROOM {roomId.slice(-2)}</div><h1>{Number(roomId.slice(-2))}번 <em>대결방</em></h1><p>현재 인원: {members.length} / 2명</p><div className="player-names"><div><small>나</small><strong>{nickname}</strong></div><b>VS</b><div><small>상대</small><strong>{opponent?.nickname||'상대 대기 중'}</strong></div></div><p>난이도: <strong>{DIFFICULTIES[roomDifficulty].label}</strong> · 경기 시간 5분 · 첫 보스 {MULTI_BOSS_TIMES[roomDifficulty].first}초 · 이후 {MULTI_BOSS_TIMES[roomDifficulty].gap}초마다 등장</p><div className="difficulty-picker"><span>대전 난이도</span>{(Object.keys(DIFFICULTIES) as Difficulty[]).map(d=><button key={d} className={roomDifficulty===d?'active':''} disabled={currentRoom?.match?.status==='playing'} onClick={()=>void changeDifficulty(d)}>{DIFFICULTIES[d].label}</button>)}</div><small>양쪽 참가자에게 동일하게 적용됩니다. 대결 시작 전 변경 가능.</small><button className="primary" disabled={members.length!==2||currentRoom?.match?.status==='playing'} onClick={()=>beginMatch(roomId).catch(error=>setMultiError(String(error)))}>{currentRoom?.match?.status==='finished'?'대결 다시하기':'두 명 입장 완료 · 대결 시작'}</button><small className="multi-warning">{multiError}</small><button onClick={exitRoom}>방 나가기</button></section>{renderChatPanel()}</div>}
     {screen==='multiResult'&&<div className="multi-room-shell"><section className="multi-wait-panel"><div className="eyebrow">MULTIPLAYER · RESULT</div><h1>{verdict}</h1><div className="player-names"><div><small>{nickname}</small><strong>{(currentRoom?.members?.[getUid()]?.score??result?.score??0).toLocaleString()}점</strong></div><b>VS</b><div><small>{opponent?.nickname||'상대'}</small><strong>{(opponent?.score||0).toLocaleString()}점</strong></div></div><p>{multiResult} {opponent?.finished?'상대도 종료했습니다.':'상대의 경기 진행 중일 수 있어요.'}</p>{opponent&&matchFinished&&<button className="primary" onClick={()=>void rematch()}>대결 다시하기 (같은 방)</button>}{!opponent&&<p className="muted">상대가 퇴장했습니다. 새 상대가 들어오면 대결할 수 있어요.</p>}<button className="primary" onClick={()=>{setScreen('room');setMultiError('')}}>대기실로 돌아가기</button><button onClick={exitRoom}>대결방 나가기</button></section>{renderChatPanel()}</div>}
-    {screen==='game'&&<div className={modeRef.current==='multi'?'multi-active':'single-active'}><div className="game"><div className="version-hint">v12.3 · 1920×1080 실제 좌표 · 전리품 18종</div><header><span>{stats.seconds<stats.nextBossAt?`보스 등장까지 ${Math.max(0,Math.ceil(stats.nextBossAt-stats.seconds))}초`:'보스 등장!'} · {DIFFICULTIES[difficulty].label}</span><strong className={stats.seconds>=SUDDEN_DEATH_AT?'sudden-timer':''}>{Math.floor(stats.seconds/60).toString().padStart(2,'0')}:{Math.floor(stats.seconds%60).toString().padStart(2,'0')}</strong>{stats.seconds>=SUDDEN_DEATH_AT&&<span className="sudden-alert">⚠ 서든 데스 · 살아남을 수 없습니다!</span>}<span>레벨 {stats.level} · 경험치 {stats.xp}/{stats.xpNeeded} · 점수 {stats.score.toLocaleString()} · 콤보 {stats.combo}</span>{modeRef.current==='multi'&&<div className="multi-opponent-score">상대 {opponent?.nickname||'대기'} · {opponentScore.toLocaleString()}점 <small>남은 시간 {Math.max(0,300-Math.floor(stats.seconds))}초</small></div>}</header><div className="gamefield"><canvas width={W} height={H} ref={canvasRef}/>{loot&&<div className="loot-overlay"><div className="loot-panel"><div className="eyebrow">LEVEL UP</div><h2>전리품을 선택하세요! <small className="loot-count">(전체 {LOOT_POOL.length}종 중 3종)</small></h2><p>원하는 카드의 단어를 입력하면 선택돼요. (게임 일시정지)</p><button className="loot-reroll" onClick={rerollLoot} disabled={stats.rerolls<1}>카드 다시 뽑기 · 남은 {stats.rerolls}회</button><div className="loot-grid">{loot.map(item=><button className="loot-card" key={item.id} onClick={()=>chooseLoot(item)}><strong>{item.name}</strong><span>{item.description}</span><b>{item.word}</b></button>)}</div></div></div>}</div><div className="upgrades-bar">{Object.entries(stats.upgrades).map(([id,n])=><span key={id} title={LOOT_POOL.find(x=>x.id===id)?.description}>{LOOT_POOL.find(x=>x.id===id)?.name} Lv.{n}</span>)}</div><div className="inputbar"><input className={mistyped?'input-error':''} ref={inputRef} value={draft} onChange={inputChange} onCompositionStart={()=>{composingRef.current=true}} onCompositionEnd={e=>{
+    {screen==='game'&&<div className={modeRef.current==='multi'?'multi-active':'single-active'}><div className="game"><div className="version-hint">v12.4 · 1920×1080 실제 좌표 · 전리품 18종</div><header><span>{stats.seconds<stats.nextBossAt?`보스 등장까지 ${Math.max(0,Math.ceil(stats.nextBossAt-stats.seconds))}초`:'보스 등장!'} · {DIFFICULTIES[difficulty].label}</span><strong className={stats.seconds>=SUDDEN_DEATH_AT?'sudden-timer':''}>{Math.floor(stats.seconds/60).toString().padStart(2,'0')}:{Math.floor(stats.seconds%60).toString().padStart(2,'0')}</strong>{stats.seconds>=SUDDEN_DEATH_AT&&<span className="sudden-alert">⚠ 서든 데스 · 살아남을 수 없습니다!</span>}<span>레벨 {stats.level} · 경험치 {stats.xp}/{stats.xpNeeded} · 점수 {stats.score.toLocaleString()} · 콤보 {stats.combo}</span>{modeRef.current==='multi'&&<div className="multi-opponent-score">상대 {opponent?.nickname||'대기'} · {opponentScore.toLocaleString()}점 <small>남은 시간 {Math.max(0,300-Math.floor(stats.seconds))}초</small></div>}</header><div className="gamefield"><canvas width={W} height={H} ref={canvasRef}/>{loot&&<div className="loot-overlay"><div className="loot-panel"><div className="eyebrow">LEVEL UP</div><h2>전리품을 선택하세요! <small className="loot-count">(전체 {LOOT_POOL.length}종 중 3종)</small></h2><p>원하는 카드의 단어를 입력하면 선택돼요. (게임 일시정지)</p><button className="loot-reroll" onClick={rerollLoot} disabled={stats.rerolls<1}>카드 다시 뽑기 · 남은 {stats.rerolls}회</button><div className="loot-grid">{loot.map(item=><button className="loot-card" key={item.id} onClick={()=>chooseLoot(item)}><strong>{item.name}</strong><span>{item.description}</span><b>{item.word}</b></button>)}</div></div></div>}</div><div className="upgrades-bar">{Object.entries(stats.upgrades).map(([id,n])=><span key={id} title={LOOT_POOL.find(x=>x.id===id)?.description}>{LOOT_POOL.find(x=>x.id===id)?.name} Lv.{n}</span>)}</div><div className="inputbar"><input className={mistyped?'input-error':''} ref={inputRef} value={draft} onChange={inputChange} onCompositionStart={()=>{composingRef.current=true}} onCompositionEnd={e=>{
       composingRef.current=false;
       const input=e.currentTarget;
       const version=typingResetVersionRef.current;

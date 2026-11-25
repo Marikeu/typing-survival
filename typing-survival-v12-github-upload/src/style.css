@@ -119,3 +119,15 @@ html,body,#root{min-width:0;min-height:100%;}
 .multi-chat-heading h2{margin:0}
 .chat-reset-button{font-size:12px;padding:6px 9px;border:1px solid #b9afa4;border-radius:5px;background:#fffdf8;color:#766052;cursor:pointer;flex-shrink:0}
 .chat-reset-button:hover{background:#f1e6dc}
+
+
+/* v12.4: 로비에서 10개 방이 공유하는 시간별 전체 채팅 */
+.multi-lobby{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(270px,350px);gap:16px;align-items:stretch;padding:20px;min-height:100dvh;max-width:none;width:100%;box-sizing:border-box;overflow:auto;}
+.multi-lobby-main{min-width:0;display:flex;flex-direction:column;align-items:center;gap:12px;justify-content:flex-start;}
+.multi-lobby .room-grid{width:min(100%,1000px);gap:10px;}
+.global-chat{position:sticky;top:20px;height:calc(100dvh - 40px);max-height:850px;min-height:400px;align-self:start;}
+.global-chat-notice{font-size:12px;line-height:1.45;color:#736d66;margin:0;padding:7px;background:#ebe8df;border-radius:5px;}
+.global-chat-count{font-size:11px;color:#7c6157;border:1px solid #ccbfb2;border-radius:12px;padding:4px 8px;white-space:nowrap;}
+.global-chat-guidance{font-size:11px;line-height:1.4;color:#857b72;}
+.global-chat .multi-chat-messages p{font-size:12px;color:#827c72;line-height:1.5;}
+@media(max-width:1020px){.multi-lobby{grid-template-columns:1fr;}.global-chat{position:static;width:min(100%,720px);height:350px;min-height:350px;max-height:none;justify-self:center;}.multi-lobby .room-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}

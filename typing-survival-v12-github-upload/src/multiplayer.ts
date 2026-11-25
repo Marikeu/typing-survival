@@ -9,6 +9,30 @@ export type MultiplayerDifficulty = 'easy' | 'normal' | 'hard';
 export type Member = { nickname: string; score: number; finished: boolean; joinedAt: number };
 export type Room = { members?: Record<string, Member>; difficulty?: MultiplayerDifficulty; match?: { id: string; startedAt: number; difficulty?: MultiplayerDifficulty; status: 'playing' | 'finished'; endedAt?: number; reason?: 'opponent_left'; winnerUid?: string } };
 export type ChatItem = { uid: string; nickname: string; text: string; at?: number };
+
+// 전체 채팅은 UTC 기준 시간별 데이터 경로로 분리합니다.
+// 표시 시간은 접속한 기기의 지역 시간으로 변환하므로 한국에서는 매시 정각에 초기화됩니다.
+export const globalChatHour = (millis = Date.now()) => `h${Math.floor(millis / 3600000)}`;
+export const globalChatResetAt = (millis = Date.now()) => (Math.floor(millis / 3600000) + 1) * 3600000;
+
+export function watchGlobalChat(hour: string, callback: (rows: ChatItem[]) => void) {
+  if (!/^h\d+$/.test(hour)) throw new Error('잘못된 전체 채팅 시간대입니다.');
+  return onValue(query(ref(database(), `globalChatHours/${hour}`), limitToLast(80)), snapshot => {
+    const values = (snapshot.val() || {}) as Record<string, ChatItem>;
+    callback(Object.values(values).sort((a, b) => (a.at || 0) - (b.at || 0)));
+  });
+}
+
+export async function sendGlobalChat(nickname: string, message: string, hour = globalChatHour()) {
+  if (!db || !myUid) throw new Error('멀티플레이 서버 연결 후 채팅할 수 있습니다.');
+  if (hour !== globalChatHour()) throw new Error('채팅 시간이 갱신됐습니다. 다시 전송해 주세요.');
+  const text = message.trim().slice(0, 150);
+  if (!text) return;
+  await set(push(ref(database(), `globalChatHours/${hour}`)), {
+    uid: myUid, nickname: nickname.trim().slice(0, 16), text, at: serverTimestamp()
+  });
+}
+
 let db: ReturnType<typeof getDatabase> | null = null;
 let myUid = '';
 
